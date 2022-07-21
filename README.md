@@ -30,3 +30,29 @@ After some amount of time the increasing voltage on the non-inverting input and 
 
 When there is a signal from the CT it swamps the ability of the negative feedback from R21 + R25 to control the inverting input pin so is effectively overriden with the natural resonant frequency of the system.
 
+### Over current detection
+The current through the CT creates a voltage across R1 (5R1). This is clamped between the 0V and 5V rails and feed into the inverting input of U5A. If the voltage exceeds the voltage set by R20 then the output of the comparator will go low signaling an over current event to the logic controlling the gate drivers. 
+
+### Interrupt input
+A signal present on the optical input of RX1 (active low) is inverted by IC4F so that the output is high when the signal is present (LED on). A signal present on the optical input of RX2 (active high) is first inverted and the pulls down the same node as RX1 which is then inverted again so that the output is again high when the signal is present. The two RX inputs are effectively OR'd together so it is not recommended to use both inputs at the same time. If RX2 is not placed it is necessary to either tie the input of IC4B low (by shorting RX2-RX1) or remove D12. Note, if you do decide to remove D12 it is still necessary to include R11 to prevent oscillation caused by a floating input to IC4B.
+
+### Undervoltage Lockout (UVLO)
+The under voltage lockout compares the 24V rail (divided by 6 and applied to the non-inverting input of U5B) to the reference voltage set by R27 applied to the inverting input of U5B. If the voltage drops below the reference voltage the output goes low signaling to the gate drive logic that an undervoltage has occured.
+
+### Gate drive logic
+This is the complex part. We'll start at the gate drivers and move backwards...
+IC12 is a multiplexer. It has two sets of 4 inputs and will take one of the two sets of inputs and connect them to the outputs. The schematic uses a slightly different nomenclature than the datasheet but for each pair of input pins ('I0a' & 'I1a' are one pair) if the 'S' pin is low then the voltage at input 'I0a' is connected to output 'Za', if the 'S' pin is high then the voltage at 'I1a' is connected to 'Za'. All the pairs are switched at the same time. This is all assuming the Enable pin is low, otherwise the outputs are all low.
+
+We connect CLK to our 'S' pin. Looking at the 'a' and 'b' inputs which connect to GDT1 we can see that 'Za' and 'Zb' have complementy outputs. CLK is derived from our phase signal so always drives GDT1 in phase with the phase signal. Inputs 'c' and 'd' are more complex. They are driven by the putpus of IC6B so depending on the state of IC6B could be either driven in phase or out of phase with CLK. If they're driven in phase with CLK (i.e. 'Q' is high) then both sides of the H-bridge will be in phase with each other and there will be no voltage across the primary tank circuit, i.e. we're freewheeling. The currents in the LC circuit are free to slosh backwards and forwards without significant resistance from the bridge. If however 'Q' is low then the output to GDT2 is out of phase and the HVDC bus voltage will occure across the primary tank causing it to ring up.
+
+IC6B samples IC6A's 'Qn' output and latches it for the next clock cycle on every rising 'CLK' edge. Under "normal" circumstances IC6A clocks in 5V on the 'D' pin so 'Qn' is 0V. 0V on the 'D' pin of IC6B means the drive is out of phase and we ring up the current. If however OCD is asserted low by the over current detect comparator at any stage during the clock cycle the output of IC6B's 'Qn' output will go high. It will stay high until the next clock edge samples the 'D' input and drives 'Qn' low again, but going low takes time, before that happens the state has already been samples by IC6B and locked in for the next cycle. The INTERRUPT signal on the 'set' pin just ensures that we're in the correct state (freewheeling off) in between on signals from the interrupter, otherwise we wouldn't be able to start.
+
+
+
+
+
+
+
+There are four flip flops (FF), the truth table for these is vital to understanding how the circuitry works so I recommend reading the datasheets. Starting at the top...
+IC6B 
+
