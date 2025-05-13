@@ -1,5 +1,5 @@
 # UDFreewheeling
-A Freewheeling DRSSTC controller based loosely on the UD2.7
+A Freewheeling DRSSTC controller based loosely on the UD2.7. See it running my 35cm coil here: (https://youtu.be/EUlrq9CbajI)
 
 Follow the development history at https://highvoltageforum.net/index.php?topic=2054.0
 
